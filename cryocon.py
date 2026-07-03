@@ -4,23 +4,49 @@ from datetime import datetime
 import pyvisa
 import threading
 import random
+import numpy as np
 
 def connect_cryocon(resource):
     rm = pyvisa.ResourceManager()
     inst = rm.open_resource(resource)
-    inst.timeout = 5000
-    inst.read_termination = '\n'
-    inst.write_termination = '\n'
-
-    print(inst.query("*IDN?"))
+    inst.timeout = 5000 # Communication timeout in milliseconds
+    inst.read_termination = '\n' #Defines how to end a lecture from the instrument. It will read until it finds a newline character.
+    inst.write_termination = '\n'#Defines how to end a write command to the instrument. It will write until it finds a newline character.
+    print(inst.query("*IDN?")) # Asks for the instrument identification (Just to check if the connection is working)
     return inst
 
 def read_temp(inst, channel):
     try:
         return float(inst.query(f"INPUT? {channel}").strip())
-    except Exception as e:
-        print(f"Error reading channel {channel}: {e}")
+    except Exception:
+        print(f"Error reading channel {channel}")
         return None
+    
+def set_heater_setpoint(inst,Temperature_setpoint):
+    try:
+        inst.write(f"HEATER:SETPT {Temperature_setpoint}")
+    except Exception:
+        print(f"Error setting temperature for Heater")
+
+def read_heater_setpoint(inst):
+    try:
+        return float(inst.query(f"HEATER:SETPT?").strip())
+    except Exception:
+        print(f"Error reading temperature setpoint for Heater")
+        return None
+
+def Check_for_stable_temperature(Maximum_offset,Maximum_std,Temperature_setpoint,Temperature_array,sampling_time,sampling_frequency):
+    T_difference = Temperature_array-Temperature_setpoint
+    weight_parameter = sampling_frequency/sampling_time
+    w = np.exp(-weight_parameter*(len(Temperature_array)-np.arange(len(Temperature_array))))
+    w = w/np.sum(w)
+    average_offset = np.sum(w*T_difference)
+    std = np.sqrt(np.sum(w*(T_difference-average_offset)**2))
+    Centinel_1 = (abs(average_offset) < Maximum_offset)
+    Centinel_2 = (std < Maximum_std)
+    return (Centinel_1,Centinel_2,average_offset+Temperature_setpoint,std)
+
+    
 
 
 class CryoconLogger:
