@@ -36,6 +36,13 @@ def read_heater_setpoint(inst):
         return None
 
 def Check_for_stable_temperature(Maximum_offset,Maximum_std,Temperature_setpoint,Temperature_array,sampling_time,sampling_frequency):
+    """
+    Changed with respect to the original version. Now it uses a weighted average and weighted std to check for stability. 
+    The weights are exponential, with a decay factor that depends on the sampling time and frequency. 
+    This way, more recent measurements have more weight in the calculation of the average and std.
+    Outputs are also changed,it returns two boolean values, one for the average offset and one for the std,
+    as well as the average temperature and std found.
+    """
     T_difference = Temperature_array-Temperature_setpoint
     weight_parameter = sampling_frequency/sampling_time
     w = np.exp(-weight_parameter*(len(Temperature_array)-np.arange(len(Temperature_array))))
@@ -50,13 +57,15 @@ def Check_for_stable_temperature(Maximum_offset,Maximum_std,Temperature_setpoint
 
 
 class CryoconLogger:
-    def __init__(self, inst, channels=("A","B","C", "D"), filename="cryocon_log.csv", interval=10):
+    def __init__(self, inst, channels=("A","B","C", "D"),temperature_control_settings={"Sample_Time":120,"Maximum_offset":0.1,"Maximum_std":0.05,"Timeout":600} ,filename="cryocon_log.csv", interval=10):
         self.inst = inst
         self.channels = list(channels)
         self.filename = filename
         self.interval = interval #in seconds
         self.running = False
         self.pending_comment = ""
+        self.temperature_control_settings = temperature_control_settings
+        self.minimum_data_points = 300
         with open(self.filename, mode="w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["timestamp", *[f"T_{ch}" for ch in self.channels], "comments"])
@@ -91,6 +100,38 @@ class CryoconLogger:
                     print(f"Logged at {timestamp}:, Comment='{comments}'")
 
             time.sleep(self.interval)
+    def Wait_for_stable_temperature(self,setpoint):
+        initial_time = time.perf_counter()
+        current_time = time.perf_counter()
+        centinel = False
+        data = [[] for _ in range (len(self.channels))]
+        counter = 0
+        offset_centinel = [False for _ in range (len(self.channels))]
+        std_centinel = [False for _ in range (len(self.channels))]
+        while (current_time - initial_time) < self.temperature_control_settings["Timeout"]:
+            temps = [read_temp(self.inst, channel) for channel in self.channels]
+            if any(abs(temps-setpoint)<1) or centinel:
+                centinel = True
+                for i in range (len(self.channels)):
+                    data[counter].append(temps[i])
+                counter +=1
+                if counter >= self.minimum_data_points:
+                    data_array = np.array(data)
+                    for j in range (len(self.channels)):
+                        Centinel_offset, Centinel_std, average_temperature, std = Check_for_stable_temperature(self.temperature_control_settings["Maximum_offset"], self.temperature_control_settings["Maximum_std"], setpoint, data_array[j], self.temperature_control_settings["Sample_Time"], 1/self.interval)
+                        offset_centinel[j] = Centinel_offset
+                        std_centinel[j] = Centinel_std
+                if all(offset_centinel) and all(std_centinel):
+                    print("Temperatures stabilized within the specified time.")
+                    return (offset_centinel, std_centinel)
+                time.sleep(self.interval)
+                current_time = time.perf_counter()
+            else:
+                time.sleep(self.interval)
+                current_time = time.perf_counter()
+        print("Timeout reached. Temperatures did not stabilize within the specified time.")
+        return (offset_centinel, std_centinel)
+        
 
 #class that pretends to be the connected crycon so i can open the pyside window from home. Generates random temperatures
 
