@@ -17,12 +17,15 @@ from cryocon import  (
     FakeCryocon 
 )   
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import (QTimer,Signal)
 
 
 class TestWindow(QWidget):
 
+    temperaturesUpdated = Signal(list)
+
     def __init__(self):
+
         super().__init__()
 
         self.setWindowTitle("Cryocon Logger")
@@ -72,7 +75,7 @@ class TestWindow(QWidget):
         layout.addWidget(QLabel("Comment"))
         layout.addWidget(self.comment)
 
-        layout.addWidget(QLabel("Filename (.csv)"))
+        layout.addWidget(QLabel("Filename"))
         layout.addWidget(self.filename)
 
         layout.addWidget(QLabel("Interval"))
@@ -92,6 +95,7 @@ class TestWindow(QWidget):
         self.stopButton.clicked.connect(self.stop_logging)
         self.connectButton.clicked.connect(self.setup_instrument)
         self.commentButton.clicked.connect(self.add_comment)
+        self.temperaturesUpdated.connect(self.update_temperatures)
 
     def setup_instrument(self):
 
@@ -102,19 +106,20 @@ class TestWindow(QWidget):
                 self.inst = FakeCryocon()
                 self.connectStatus.setText("Using Fake Cryocon")
             else:
-                self.inst = connect_cryocon("GPIB0::12::INSTR")
+                self.inst = connect_cryocon("GPIB0::7::INSTR")
                 self.connectStatus.setText("Ready")
             self.logger = CryoconLogger(
                 self.inst,
                 channels=("A", "B", "C", "D"),
                 interval=self.interval.value(),
-                filename = (self.filename.text())
-         )
+                filename=self.filename.text(),
+                update_callback=self.temperaturesUpdated.emit
+                )
 
 
     def start_logging(self):
 
-        if not self.logger:
+        if self.logger is None:
             self.connectStatus.setText("No logger initialized")
             return
         else:
@@ -128,6 +133,13 @@ class TestWindow(QWidget):
 
     def add_comment(self):
         self.logger.add_comment(self.comment.text())
+
     
-    def file_name(self):
-        self.filename
+    def update_temperatures(self, temps):
+        labels = [self.tempA, self.tempB, self.tempC, self.tempD]
+
+        for label, temp in zip(labels, temps):
+            if temp is None:
+                label.setText("--")
+            else:
+                label.setText(f"{temp:.3f} K")

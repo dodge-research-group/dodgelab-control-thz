@@ -24,13 +24,14 @@ def read_temp(inst, channel):
 
 
 class CryoconLogger:
-    def __init__(self, inst, channels=("A","B","C", "D"), filename="cryocon_log.csv", interval=10):
+    def __init__(self, inst, channels=("A","B","C", "D"), filename="cryocon_log.csv", interval=10, update_callback=None):
         self.inst = inst
         self.channels = list(channels)
         self.filename = filename
         self.interval = interval #in seconds
         self.running = False
         self.pending_comment = ""
+        self.update_callback = update_callback
         with open(self.filename, mode="w", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["timestamp", *[f"T_{ch}" for ch in self.channels], "comments"])
@@ -61,8 +62,11 @@ class CryoconLogger:
             with open(self.filename, "a", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow([timestamp, *temps, comments])
+                
                 if comments != "":
                     print(f"Logged at {timestamp}:, Comment='{comments}'")
+            if self.update_callback is not None:
+                self.update_callback(temps)
 
             time.sleep(self.interval)
 
