@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QSpinBox,
     QCheckBox,
     QMessageBox
@@ -18,7 +19,8 @@ from cryocon import  (
 )   
 
 from PySide6.QtCore import (QTimer,Signal)
-
+import pyqtgraph as pg
+import time
 
 class TestWindow(QWidget):
 
@@ -28,7 +30,30 @@ class TestWindow(QWidget):
 
         super().__init__()
 
+        #Graph plotting
+        self.plotA = pg.PlotWidget(title="Channel A")
+        self.plotB = pg.PlotWidget(title="Channel B")
+        self.plotC = pg.PlotWidget(title="Channel C")
+        self.plotD = pg.PlotWidget(title="Channel D")
+
+        for plot in [self.plotA, self.plotB, self.plotC, self.plotD]:
+            plot.setLabel("left", "Temperature", units="K")
+            plot.setLabel("bottom", "Time", units="s")
+
+        self.curveA = self.plotA.plot(name="Channel A",pen='r')
+        self.curveB = self.plotB.plot(name="Channel B",pen='g')
+        self.curveC = self.plotC.plot(name="Channel C",pen='b')
+        self.curveD = self.plotD.plot(name="Channel D",pen='white')
+
         self.setWindowTitle("Cryocon Logger")
+
+        self.startTime = None
+
+        self.times = []
+        self.tempAData = []
+        self.tempBData = []
+        self.tempCData = []
+        self.tempDData = []
 
         self.connectStatus = QLabel("Disconnected")
         self.runStatus = QLabel("Stopped")
@@ -52,45 +77,56 @@ class TestWindow(QWidget):
         self.commentButton = QPushButton("Save Comment")
         self.simcheck = QCheckBox("Simulate Random Data?")
 
-        layout = QVBoxLayout()
+        mainLayout = QHBoxLayout()
 
-        layout.addWidget(self.simcheck)
-        layout.addWidget(self.connectButton)
+        controlsLayout = QVBoxLayout()
+        graphLayout = QGridLayout()
 
-        layout.addWidget(self.connectStatus)
-        layout.addWidget(self.runStatus)
+        controlsLayout.addWidget(self.simcheck)
+        controlsLayout.addWidget(self.connectButton)
 
-        layout.addWidget(QLabel("Temperature A"))
-        layout.addWidget(self.tempA)
+        controlsLayout.addWidget(self.connectStatus)
+        controlsLayout.addWidget(self.runStatus)
 
-        layout.addWidget(QLabel("Temperature B"))
-        layout.addWidget(self.tempB)
+        controlsLayout.addWidget(QLabel("Temperature A"))
+        controlsLayout.addWidget(self.tempA)
 
-        layout.addWidget(QLabel("Temperature C"))
-        layout.addWidget(self.tempC)
+        controlsLayout.addWidget(QLabel("Temperature B"))
+        controlsLayout.addWidget(self.tempB)
 
-        layout.addWidget(QLabel("Temperature D"))
-        layout.addWidget(self.tempD)
+        controlsLayout.addWidget(QLabel("Temperature C"))
+        controlsLayout.addWidget(self.tempC)
 
-        layout.addWidget(QLabel("Comment"))
-        layout.addWidget(self.comment)
+        controlsLayout.addWidget(QLabel("Temperature D"))
+        controlsLayout.addWidget(self.tempD)
 
-        layout.addWidget(QLabel("Filename"))
-        layout.addWidget(self.filename)
+        controlsLayout.addWidget(QLabel("Comment"))
+        controlsLayout.addWidget(self.comment)
 
-        layout.addWidget(QLabel("Interval"))
-        layout.addWidget(self.interval)
+        controlsLayout.addWidget(QLabel("Filename"))
+        controlsLayout.addWidget(self.filename)
+
+        controlsLayout.addWidget(QLabel("Interval"))
+        controlsLayout.addWidget(self.interval)
 
         buttons = QHBoxLayout()
         buttons.addWidget(self.startButton)
         buttons.addWidget(self.stopButton)
-        layout.addLayout(buttons)          
+        controlsLayout.addLayout(buttons)          
 
         buttons2 = QVBoxLayout()
         buttons2.addWidget(self.commentButton)
-        layout.addLayout(buttons2)
-        self.setLayout(layout)
+        controlsLayout.addLayout(buttons2)
     
+        graphLayout.addWidget(self.plotA, 0, 0)
+        graphLayout.addWidget(self.plotB, 0, 1)
+        graphLayout.addWidget(self.plotC, 1, 0)
+        graphLayout.addWidget(self.plotD, 1, 1)
+
+        mainLayout.addLayout(controlsLayout, 1)
+        mainLayout.addLayout(graphLayout, 3)
+        self.setLayout(mainLayout)
+
         self.startButton.clicked.connect(self.start_logging)
         self.stopButton.clicked.connect(self.stop_logging)
         self.connectButton.clicked.connect(self.setup_instrument)
@@ -122,10 +158,21 @@ class TestWindow(QWidget):
         if self.logger is None:
             self.connectStatus.setText("No logger initialized")
             return
-        else:
-            self.logger.interval = self.interval.value()
-            self.logger.start()
-            self.runStatus.setText("Logging...")
+        if len(self.times) > 0:
+            reply = QMessageBox.question(
+                self,
+                "Clear Graphs?",
+                "Graphs already contain data. Clear graphs before starting?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No
+            )
+
+            if reply == QMessageBox.Yes:
+                self.clear_graphs()
+        
+        self.logger.interval = self.interval.value()
+        self.logger.start()
+        self.runStatus.setText("Logging...")
 
     def stop_logging(self):
         self.logger.stop()
@@ -136,6 +183,19 @@ class TestWindow(QWidget):
 
     
     def update_temperatures(self, temps):
+
+        if self.startTime is None:
+            self.startTime = time.time()
+
+        elapsed = time.time() - self.startTime
+
+        self.times.append(elapsed)
+
+        self.tempAData.append(temps[0])
+        self.tempBData.append(temps[1])
+        self.tempCData.append(temps[2])
+        self.tempDData.append(temps[3])
+
         labels = [self.tempA, self.tempB, self.tempC, self.tempD]
 
         for label, temp in zip(labels, temps):
@@ -143,3 +203,24 @@ class TestWindow(QWidget):
                 label.setText("--")
             else:
                 label.setText(f"{temp:.3f} K")
+
+        self.curveA.setData(self.times, self.tempAData)
+        self.curveB.setData(self.times, self.tempBData)
+        self.curveC.setData(self.times, self.tempCData)
+        self.curveD.setData(self.times, self.tempDData)
+    
+    def clear_graphs(self):
+
+        self.times.clear()
+
+        self.tempAData.clear()
+        self.tempBData.clear()
+        self.tempCData.clear()
+        self.tempDData.clear()
+
+        self.startTime = None
+
+        self.curveA.clear()
+        self.curveB.clear()
+        self.curveC.clear()
+        self.curveD.clear()
