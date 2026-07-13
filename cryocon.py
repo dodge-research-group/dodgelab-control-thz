@@ -57,7 +57,7 @@ def Check_for_stable_temperature(Maximum_offset,Maximum_std,Temperature_setpoint
 
 
 class CryoconLogger:
-    def __init__(self, inst, channels=("A","B","C", "D"),temperature_control_settings={"Sample_Time":120,"Maximum_offset":0.1,"Maximum_std":0.05,"Timeout":600} ,filename="cryocon_log.csv", interval=10):
+    def __init__(self, inst, channels=("A","B","C", "D"),temperature_control_settings={"Sample_Time":120,"Maximum_offset":0.1,"Maximum_std":0.05,"Timeout":600} ,filename="cryocon_log.csv", interval=0.001):
         self.inst = inst
         self.channels = list(channels)
         self.filename = filename
@@ -66,9 +66,9 @@ class CryoconLogger:
         self.pending_comment = ""
         self.temperature_control_settings = temperature_control_settings
         self.minimum_data_points = 300
-        with open(self.filename, mode="w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["timestamp", *[f"T_{ch}" for ch in self.channels], "comments"])
+        #with open(self.filename, mode="w", newline="") as f:
+            #writer = csv.writer(f)
+            #writer.writerow(["timestamp", *[f"T_{ch}" for ch in self.channels], "comments"])
 
     def add_comment(self, text):
         self.pending_comment = str(text).strip()
@@ -80,8 +80,9 @@ class CryoconLogger:
         print("Logging stopped.")
 
     def start(self):
-        self.thread = threading.Thread(target=self._run)
-        self.running = True
+        #self.thread = threading.Thread(target=self.Wait_for_stable_temperature, args=(self, 20))
+        self.Wait_for_stable_temperature(20)
+        #self.running = True
         self.thread.start()
 
     def _run(self):
@@ -108,12 +109,19 @@ class CryoconLogger:
         counter = 0
         offset_centinel = [False for _ in range (len(self.channels))]
         std_centinel = [False for _ in range (len(self.channels))]
-        while (current_time - initial_time) < self.temperature_control_settings["Timeout"]:
-            temps = [read_temp(self.inst, channel) for channel in self.channels]
+        counter_2 =0
+        temp_array = np.zeros((len(self.channels),100000))
+        for i in range (len(self.channels)):
+            a = FakeCryocon.fake_temperature_data_set(10,setpoint,a=np.random.normal(0, 0.1),n=10000)
+            temp_array[i, :] = a
+        while (current_time - initial_time) < self.temperature_control_settings["Timeout"] or (current_time - initial_time)<1:
+            #temps = [read_temp(self.inst, channel) for channel in self.channels]
+            temps = temp_array[:,counter_2]
+            counter_2 +=1
             if any(abs(temps-setpoint)<1) or centinel:
                 centinel = True
                 for i in range (len(self.channels)):
-                    data[counter].append(temps[i])
+                    data[i].append(temps[i])
                 counter +=1
                 if counter >= self.minimum_data_points:
                     data_array = np.array(data)
@@ -124,10 +132,10 @@ class CryoconLogger:
                 if all(offset_centinel) and all(std_centinel):
                     print("Temperatures stabilized within the specified time.")
                     return (offset_centinel, std_centinel)
-                time.sleep(self.interval)
+                #time.sleep(self.interval)
                 current_time = time.perf_counter()
             else:
-                time.sleep(self.interval)
+                #time.sleep(self.interval)
                 current_time = time.perf_counter()
         print("Timeout reached. Temperatures did not stabilize within the specified time.")
         return (offset_centinel, std_centinel)
@@ -144,3 +152,18 @@ class FakeCryocon:
 
         if command.startswith("INPUT?"):
             return str(20 + random.uniform(-0.05, 0.05))
+    def fake_temperature_data_set(initial_temp,setpoint,a=0.05,n=1000,noise=0.1):
+        """
+        Generates a fake temperature data set that simulates a temperature stabilizing around a setpoint.
+        The temperature will start at a random value and will converge to the setpoint over time.
+        The parameter 'a' controls the rate of convergence, and 'n' is the number of data points.
+        """
+        temperature_array = np.zeros(n)
+
+        temperature_array[0] = initial_temp          # Initial Temperature
+        Temperature_setpoint = setpoint        # Setpoint Temperature
+        alpha = a        # Response velocity
+
+        for i in range(n-1):
+            temperature_array[i+1] = temperature_array[i] + alpha * (Temperature_setpoint  - temperature_array[i])+ np.random.normal(0, noise) 
+        return temperature_array
