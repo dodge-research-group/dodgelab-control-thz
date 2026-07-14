@@ -22,6 +22,7 @@ from PySide6.QtCore import (QTimer,Signal)
 import pyqtgraph as pg
 import time
 
+
 class TestWindow(QWidget):
 
     temperaturesUpdated = Signal(list)
@@ -35,6 +36,10 @@ class TestWindow(QWidget):
         self.plotB = pg.PlotWidget(title="Channel B")
         self.plotC = pg.PlotWidget(title="Channel C")
         self.plotD = pg.PlotWidget(title="Channel D")
+        self.showA = QCheckBox("Hide Graph A")
+        self.showB = QCheckBox("Hide Graph B")
+        self.showC = QCheckBox("Hide Graph C")
+        self.showD = QCheckBox("Hide Graph D")
 
         for plot in [self.plotA, self.plotB, self.plotC, self.plotD]:
             plot.setLabel("left", "Temperature", units="K")
@@ -70,6 +75,9 @@ class TestWindow(QWidget):
         self.interval.setRange(1, 3600)
         self.interval.setValue(10)
 
+        self.truncate = QSpinBox()
+        self.truncate.setRange(1,10000)
+        self.truncate.setValue(10000)
 
         self.startButton = QPushButton("Start Logging")
         self.stopButton = QPushButton("Stop Logging")
@@ -100,6 +108,7 @@ class TestWindow(QWidget):
         controlsLayout.addWidget(QLabel("Temperature D"))
         controlsLayout.addWidget(self.tempD)
 
+
         controlsLayout.addWidget(QLabel("Comment"))
         controlsLayout.addWidget(self.comment)
 
@@ -108,6 +117,9 @@ class TestWindow(QWidget):
 
         controlsLayout.addWidget(QLabel("Interval"))
         controlsLayout.addWidget(self.interval)
+
+        controlsLayout.addWidget(QLabel("Truncate old graph data after how many seconds?"))
+        controlsLayout.addWidget(self.truncate)
 
         buttons = QHBoxLayout()
         buttons.addWidget(self.startButton)
@@ -118,10 +130,26 @@ class TestWindow(QWidget):
         buttons2.addWidget(self.commentButton)
         controlsLayout.addLayout(buttons2)
     
-        graphLayout.addWidget(self.plotA, 0, 0)
-        graphLayout.addWidget(self.plotB, 0, 1)
-        graphLayout.addWidget(self.plotC, 1, 0)
-        graphLayout.addWidget(self.plotD, 1, 1)
+
+        graphLayout.setRowStretch(1, 1)
+        graphLayout.setRowStretch(3, 1)
+
+        graphLayout.setColumnStretch(0, 1)
+        graphLayout.setColumnStretch(1, 1)
+
+        graphLayout.addWidget(self.showA, 0, 0)
+        graphLayout.addWidget(self.plotA, 1, 0)
+        graphLayout.addWidget(self.showB, 0, 1)
+        graphLayout.addWidget(self.plotB, 1, 1)
+        graphLayout.addWidget(self.showC, 2, 0)
+        graphLayout.addWidget(self.plotC, 3, 0)
+        graphLayout.addWidget(self.showD, 2, 1)
+        graphLayout.addWidget(self.plotD, 3, 1)
+
+        self.plotA.setVisible(True)
+        self.plotB.setVisible(True)
+        self.plotC.setVisible(True)
+        self.plotD.setVisible(True)
 
         mainLayout.addLayout(controlsLayout, 1)
         mainLayout.addLayout(graphLayout, 3)
@@ -132,6 +160,11 @@ class TestWindow(QWidget):
         self.connectButton.clicked.connect(self.setup_instrument)
         self.commentButton.clicked.connect(self.add_comment)
         self.temperaturesUpdated.connect(self.update_temperatures)
+
+        self.showA.toggled.connect(self.plotA.setHidden)
+        self.showB.toggled.connect(self.plotB.setHidden)
+        self.showC.toggled.connect(self.plotC.setHidden)
+        self.showD.toggled.connect(self.plotD.setHidden)
 
     def setup_instrument(self):
 
@@ -195,6 +228,15 @@ class TestWindow(QWidget):
         self.tempBData.append(temps[1])
         self.tempCData.append(temps[2])
         self.tempDData.append(temps[3])
+
+        window = self.truncate.value()
+
+        while self.times and (elapsed - self.times[0]) > window:
+            self.times.pop(0)
+            self.tempAData.pop(0)
+            self.tempBData.pop(0)
+            self.tempCData.pop(0)
+            self.tempDData.pop(0)
 
         labels = [self.tempA, self.tempB, self.tempC, self.tempD]
 
