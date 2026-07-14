@@ -25,9 +25,9 @@ class Cryocon34(TemperatureController):
             print("Error reading the control channel for the Heater")
             return None
             
-    def set_heater_setpoint(self,Temperature_setpoint):
+    def set_heater_setpoint(self,temperature_setpoint):
         try:
-            self.write(f"HEATER:SETPT {Temperature_setpoint}")
+            self.write(f"HEATER:SETPT {temperature_setpoint}")
         except Exception:
             print(f"Error setting temperature for Heater")   
             
@@ -38,21 +38,29 @@ class Cryocon34(TemperatureController):
             print(f"Error reading temperature setpoint for Heater")
             return None
         
-    def start_control(self):
-        try: 
-            self.write("CONTROL")
+    def write_heater_status(self,status):
+        try:
+            self.write(f"HEATER:TYPE {status}")
         except Exception:
-            print("Error activating the control loop")
+            print(f"Error writing Heater status")   
             
-    def stop_control(self):
+    def read_heater_status(self):
         try:
-            self.write("STOP")
+            return self.query("HEATER:TYPE?").strip()
         except Exception:
-            print("Error stopping the control loop")
-    def read_control(self):
+            print("Error reading the heater status")
+            return None
+        
+    def write_heater_range(self,range):
         try:
-            return self.query("CONTROL?").strip()
+            self.write(f"HEATER:RANGE {range}")
         except Exception:
-            print("Error reading the control loop")
+            print("Error setting heater range")
+    
+    def read_heater_range(self):
+        try:
+            return self.query("HEATER:RANGE?").strip()
+        except Exception:
+            print("Error reading heater_range")
             return None
             
