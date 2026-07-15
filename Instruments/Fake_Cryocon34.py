@@ -4,12 +4,12 @@ import numpy as np
 class Fakecryocon34:
     def init(self):
         self.temperature = {
-        "A": 300.0,
-        "B": 300.0,
-        "C": 300.0,
-        "D": 300.0 }
+        "A": 0.0,
+        "B": 0.0,
+        "C": 0.0,
+        "D": 0.0 }
         self.control_channel = "A"
-        self.setpoint = 300.0
+        self.setpoint = 5.0
         self.heater_range = 0
         self.heater_status = "OFF"
 

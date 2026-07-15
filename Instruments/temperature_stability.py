@@ -1,26 +1,43 @@
 import numpy as np
-import random
-import time
 
 class temperature_stability():
-    def _init_(self,controller,
-                channel,
-                sample_time,
+    def __init__(self,
+                minimum_sample_time,
                 sampling_frequency,
                 maximum_offset,
-                maximum_std,
-                timeout):
-        self.controller = controller
-        self.channels = channel
-        self.sample_time = sample_time
+                maximum_std,):
+        self.minimum_sample_time = minimum_sample_time
         self.sampling_frequency = sampling_frequency
         self.maximum_offset = maximum_offset
         self.maximum_std = maximum_std
-        self.timeout = timeout
-        self.offset_centinel = False
-        self.std_centinel = False
+        self.temperature_history = []
         
-    def Check_for_stable_temperature(self,Temperature_setpoint,Temperature_array):
+        self.offset_ok = False
+        self.std_ok = False
+        self.stable = False
+
+        self.average_temperature = np.nan
+        self.std = np.nan
+        
+    def reset(self):
+
+        self.temperature_history.clear()
+
+        self.offset_ok = False
+        self.std_ok = False
+        self.stable = False
+
+        self.average_temperature = np.nan
+        self.std = np.nan
+    
+    def update (self,temperature,temperature_setpoint):
+        """
+        updates the temperature array and calls checks_for_stable_temperature.
+        """
+        self.temperature_history.append(temperature)
+        self.Check_for_stable_temperature(temperature_setpoint)
+    
+    def Check_for_stable_temperature(self,Temperature_setpoint):
         """
         Changed with respect to the original version. Now it uses a weighted average and weighted std to check for stability. 
         The weights are exponential, with a decay factor that depends on the sampling time and frequency. 
@@ -28,16 +45,18 @@ class temperature_stability():
         Outputs are also changed,it returns two boolean values, one for the average offset and one for the std,
         as well as the average temperature and std found.
         """
+        Temperature_array = np.array(self.temperature_history)
         T_difference = Temperature_array-Temperature_setpoint
-        weight_parameter = 1/self.sample_time
+        weight_parameter = 1/(self.sampling_frequency*self.minimum_sample_time)
         w = np.exp(-weight_parameter*(len(Temperature_array)-np.arange(len(Temperature_array))))
         w = w/np.sum(w)
         average_offset = np.sum(w*T_difference)
         std = np.sqrt(np.sum(w*(T_difference-average_offset)**2))
-        self.offset_centinel = (abs(average_offset) < self.maximum_offset)
-        self.std_centinel = (std < self.maximum_std)
+        self.offset_ok = (abs(average_offset) < self.maximum_offset)
+        self.std_ok = (std < self.maximum_std)
         self.average_temperature = average_offset+Temperature_setpoint
         self.std = std
-        return self.offset_centinel,self.std_centinel,self.average_temperature,self.std
-
+        if self.offset_ok == True and self.std_ok == True:
+            self.stable = True
+    
         
