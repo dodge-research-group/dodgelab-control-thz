@@ -32,7 +32,8 @@ class temperature_logger():
         
     def log_data(self,temperatures,stabilities):
         
-        row = [time.time() ]
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S" )
+        row = [timestamp]
         for ch in self.channels:
             row.append(temperatures[ch])
         for ch in self.channels:
