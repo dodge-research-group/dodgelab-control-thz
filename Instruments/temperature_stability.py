@@ -1,32 +1,25 @@
 import numpy as np
 
 class temperature_stability():
-    def __init__(self,
-                minimum_sample_time,
-                sampling_frequency,
-                maximum_offset,
-                maximum_std,):
+    def __init__(self, minimum_sample_time,sampling_frequency,maximum_offset,maximum_std,):
+        
         self.minimum_sample_time = minimum_sample_time
         self.sampling_frequency = sampling_frequency
         self.maximum_offset = maximum_offset
         self.maximum_std = maximum_std
         self.temperature_history = []
-        
         self.offset_ok = False
         self.std_ok = False
         self.stable = False
-
         self.average_temperature = np.nan
         self.std = np.nan
         
     def reset(self):
 
-        self.temperature_history.clear()
-
+        self.temperature_history = []
         self.offset_ok = False
         self.std_ok = False
         self.stable = False
-
         self.average_temperature = np.nan
         self.std = np.nan
     
@@ -35,7 +28,11 @@ class temperature_stability():
         updates the temperature array and calls checks_for_stable_temperature.
         """
         self.temperature_history.append(temperature)
+        elapsed_time = len(self.temperature_history)/self.sampling_frequency
+        if elapsed_time < self.minimum_sample_time:
+            return
         self.Check_for_stable_temperature(temperature_setpoint)
+
     
     def Check_for_stable_temperature(self,Temperature_setpoint):
         """

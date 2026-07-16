@@ -2,10 +2,7 @@ import csv
 import time
 from datetime import datetime
 class temperature_logger():
-    def __init__(
-        self,
-        filename,
-        channels):
+    def __init__(self,filename,channels):
 
         self.filename = filename
         self.channels = channels
@@ -16,6 +13,7 @@ class temperature_logger():
         self.write_headers()
         
     def write_headers(self):
+        
         header = ["time"]
         for ch in self.channels:
             header.append(f"T_{ch}")
@@ -30,8 +28,10 @@ class temperature_logger():
         for ch in self.channels:
             header.append(f"stable_{ch}")
         self.writer.writerow(header)
+        self.event_writer.writerow(["time","event","source","message"])
         
     def log_data(self,temperatures,stabilities):
+        
         row = [time.time() ]
         for ch in self.channels:
             row.append(temperatures[ch])
@@ -46,20 +46,19 @@ class temperature_logger():
         for ch in self.channels:
             row.append(stabilities[ch].stable)
         self.writer.writerow(row)
+        self.data_file.flush()
   
 
-    def log_event(self,event,source="System",message=""
-    ):
+    def log_event(self,event,source="System",message=""):
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        self.event_writer.writerow(
-            [
-                timestamp,
-                event,
-                source,
-                message
-            ]
-        )
-
+        self.event_writer.writerow([timestamp,event,source,message])
         self.event_file.flush()
+        
+    def comment(self, message):
+
+        self.log_event(event="Comment",source="User",message=message)    
+        
+    def close(self):
+        self.data_file.close()
+        self.event_file.close()
