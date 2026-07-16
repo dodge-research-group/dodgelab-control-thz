@@ -95,7 +95,7 @@ class TemperatureLoop:
 
         start_time = time.monotonic()
         while not self._stop_event.is_set():
-            temperatures = (self.controller.read_temperatures(self.channels))
+            temperatures = {channel: self.controller.read_temperature(channel,self.temperature_arange[self.current_temperature_index]) for channel in self.channels}
             self.temperatures = temperatures
             self._update_stabilities(temperatures)
             if self.logger is not None:
@@ -161,11 +161,14 @@ class TemperatureLoop:
     def set_heater_setpoint(self, setpoint):
         
         old_setpoint = self.current_setpoint
-        self.controller.set_setpoint(setpoint)
+        self.controller.set_heater_setpoint(setpoint)
         self.current_setpoint = setpoint
         for stability in self.stabilities.values():
             stability.reset()
-        self.logger.log_event(event="Heater Setpoint Changed",source="User",message=f"{old_setpoint} -> {setpoint}")
+        for channel in self.centinels:
+            self.centinels[channel] = False
+        if self.logger is not None:
+            self.logger.log_event(event="Heater Setpoint Changed",source="User",message=f"{old_setpoint} -> {setpoint}")
         
     def _advance_temperature(self):
         

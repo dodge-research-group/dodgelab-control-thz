@@ -2,12 +2,12 @@ from Temperature_controllers import TemperatureController
 
 class Cryocon34(TemperatureController):
     
-    def init(self):
-        
-        self.connect("GPIB0::7::INSTR")
-    
-    def read_temperature(self,channel):
-        
+    def __init__(self):
+        try:
+            self.connect("GPIB0::7::INSTR")
+        except Exception:
+            print("Error connecting to the Cryo-con 34")
+    def read_temperature(self,channel,setpoint): 
         try:
             return float(self.query(f"INPUT? {channel}").strip())
         except Exception:

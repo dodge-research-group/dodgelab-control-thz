@@ -1,0 +1,5 @@
+time,event,source,message
+2026-07-16 14:07:27,Temperature Started,TemperatureLoop,Setpoint changed to 10
+2026-07-16 14:07:29,Comment,User,Experiment started
+2026-07-16 14:08:27,Temperature Stability Timeout,TemperatureLoop,"Setpoint: 10; Unstable channels: ['A', 'B', 'C', 'D']"
+2026-07-16 14:08:27,Temperature Started,TemperatureLoop,Setpoint changed to 20

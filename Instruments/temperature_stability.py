@@ -1,15 +1,15 @@
 import numpy as np
 
 class temperature_stability():
-    def __init__(self, minimum_sample_time,sampling_frequency,maximum_offset,maximum_std,):
+    def __init__(self, minimum_sample_time,sampling_frequency,maximum_offset,maximum_std):
         
         self.minimum_sample_time = minimum_sample_time
         self.sampling_frequency = sampling_frequency
         self.maximum_offset = maximum_offset
         self.maximum_std = maximum_std
         self.temperature_history = []
-        self.offset_ok = False
-        self.std_ok = False
+        self.offset_stable = False
+        self.std_stable = False
         self.stable = False
         self.average_temperature = np.nan
         self.std = np.nan
@@ -17,8 +17,8 @@ class temperature_stability():
     def reset(self):
 
         self.temperature_history = []
-        self.offset_ok = False
-        self.std_ok = False
+        self.offset_stable = False
+        self.std_stable = False
         self.stable = False
         self.average_temperature = np.nan
         self.std = np.nan
@@ -49,11 +49,11 @@ class temperature_stability():
         w = w/np.sum(w)
         average_offset = np.sum(w*T_difference)
         std = np.sqrt(np.sum(w*(T_difference-average_offset)**2))
-        self.offset_ok = (abs(average_offset) < self.maximum_offset)
-        self.std_ok = (std < self.maximum_std)
+        self.offset_stable = (abs(average_offset) < self.maximum_offset)
+        self.std_stable = (std < self.maximum_std)
         self.average_temperature = average_offset+Temperature_setpoint
         self.std = std
-        if self.offset_ok == True and self.std_ok == True:
+        if self.offset_stable == True and self.std_stable == True:
             self.stable = True
     
         

@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Fakecryocon34:
-    def init(self):
+    def __init__(self):
         self.temperature = {
         "A": 0.0,
         "B": 0.0,
@@ -13,7 +13,8 @@ class Fakecryocon34:
         self.heater_range = 0
         self.heater_status = "OFF"
 
-    def read_temperature(self,channel):
+    def read_temperature(self,channel,setpoint,noise=0.03):
+        self.temperature[channel] = self.temperature[channel]+(setpoint-self.temperature[channel])*0.05+ np.random.normal(0, noise)
         return float(self.temperature[channel])  
     
     def set_control_channel(self,control_channel):
