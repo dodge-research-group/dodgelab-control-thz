@@ -1,4 +1,4 @@
-from Temperature_controllers import TemperatureController
+from Instruments.Temperature_controllers import TemperatureController
 
 class Cryocon34(TemperatureController):
     

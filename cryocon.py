@@ -110,7 +110,7 @@ class CryoconLogger:
         offset_centinel = [False for _ in range (len(self.channels))]
         std_centinel = [False for _ in range (len(self.channels))]
         counter_2 =0
-        temp_array = np.zeros((len(self.channels),100000))
+        temp_array = np.zeros((len(self.channels),10000))
         for i in range (len(self.channels)):
             a = FakeCryocon.fake_temperature_data_set(10,setpoint,a=np.random.normal(0, 0.1),n=10000)
             temp_array[i, :] = a

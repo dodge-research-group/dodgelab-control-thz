@@ -2,7 +2,7 @@ import threading
 from pathlib import Path
 import time
 import numpy as np
-from temperature_stability import temperature_stability
+from Instruments.temperature_stability import temperature_stability
 class TemperatureLoop:
 
     def __init__(

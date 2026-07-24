@@ -10,12 +10,21 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QMessageBox
 )
-from cryocon import  (
-    connect_cryocon,
-    read_temp,
-    CryoconLogger,
-    FakeCryocon 
-)   
+# DELETE THIS ONCE gui.py and main.py is updated
+# from cryocon import  (
+#     connect_cryocon,
+#     read_temp,
+#     CryoconLogger,
+#     FakeCryocon 
+# )   
+
+from Instruments.Cryocon34 import Cryocon34
+from Instruments.Fake_Cryocon34 import FakeCryocon34
+from Instruments.Temperature_controllers import TemperatureController
+from Instruments.temperature_logger import temperature_logger
+from Instruments.Temperature_loop import TemperatureLoop
+from Instruments.temperature_stability import temperature_stability
+
 
 from PySide6.QtCore import QTimer
 
@@ -94,22 +103,35 @@ class TestWindow(QWidget):
         self.commentButton.clicked.connect(self.add_comment)
 
     def setup_instrument(self):
-
         if not self.filename.text().strip():
-            QMessageBox.critical(None, "Error", "File name is empty or contains only spaces")
+            QMessageBox.critical(
+                self,
+                "Error",
+                "File name is empty or contains only spaces"
+            )
+            return
+
+        if self.simcheck.isChecked():
+            self.inst = FakeCryocon34()
+            self.connectStatus.setText("Using Fake Cryocon")
         else:
-            if self.simcheck.isChecked():
-                self.inst = FakeCryocon()
-                self.connectStatus.setText("Using Fake Cryocon")
-            else:
-                self.inst = connect_cryocon("GPIB0::12::INSTR")
+            try:
+                self.inst = Cryocon34()
                 self.connectStatus.setText("Ready")
-            self.logger = CryoconLogger(
-                self.inst,
-                channels=("A", "B", "C", "D"),
-                interval=self.interval.value(),
-                filename = (self.filename.text())
-         )
+            except Exception as e:
+                QMessageBox.critical(self, "Connection Error", str(e))
+                return
+
+        self.logger = temperature_logger(
+            filename=self.filename.text(),
+            channels=("A","B","C","D"),
+        )
+        self.temperature_loop = TemperatureLoop(
+            controller=self.inst,
+            temperature_arange=[4,5,6,7],
+            channels=("A","B","C","D"),
+            logger=self.logger
+    )
 
 
     def start_logging(self):
@@ -119,11 +141,12 @@ class TestWindow(QWidget):
             return
         else:
             self.logger.interval = self.interval.value()
-            self.logger.start()
+            self.temperature_loop.start()
             self.runStatus.setText("Logging...")
 
     def stop_logging(self):
-        self.logger.stop()
+        self.temperature_loop.stop()
+        self.logger.close()
         self.runStatus.setText("Stopped")
 
     def add_comment(self):
