@@ -59,7 +59,7 @@ class FakeCryocon34(TemperatureController):
             self.write_heater_range(value)
 
 
-    def read_temperature(self, channel, setpoint, noise=0.03):
+    def read_temperature(self, channel, setpoint, noise=0.01):
         self.temperature[channel] += (
             (setpoint - self.temperature[channel])*0.05
             + np.random.normal(0, noise)

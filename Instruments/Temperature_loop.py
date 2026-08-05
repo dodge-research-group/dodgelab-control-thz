@@ -12,12 +12,13 @@ class TemperatureLoop:
         channels=("A", "B", "C", "D"),
         control_channel="A",
         sample_time=60,
-        sampling_frequency=1,
+        sampling_frequency=10,
         minimum_offset = 1,
         maximum_offset=0.1,
-        maximum_std=0.05,
-        timeout=600,
-        logger=None):
+        maximum_std=0.1,
+        timeout=60,
+        logger=None,
+        stability_callback=None):
         
         self.controller = controller
         self.channels = list(channels)
@@ -30,6 +31,7 @@ class TemperatureLoop:
         self.timeout = timeout
         self.minimum_offset = minimum_offset
         self.logger = logger
+        self.stability_callback = stability_callback
         self.stabilities = {
             channel: temperature_stability(
                 minimum_sample_time=sample_time,
@@ -150,6 +152,8 @@ class TemperatureLoop:
             if self._all_channels_stable() and centinel_1== False:
                 self._log_stability()
                 centinel_1 = True
+                if self.stability_callback is not None:
+                    self.stability_callback(self.current_setpoint)
             if (time.monotonic()-start_time>=self.timeout)and centinel_2 == False:
                 self._log_timeout()
                 centinel_2 = True
