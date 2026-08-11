@@ -37,14 +37,14 @@ class TestWindow(QWidget):
         super().__init__()
 
         #Graph plotting
-        self.plotA = pg.PlotWidget(title="Channel A")
-        self.plotB = pg.PlotWidget(title="Channel B")
-        self.plotC = pg.PlotWidget(title="Channel C")
-        self.plotD = pg.PlotWidget(title="Channel D")
-        self.showA = QCheckBox("Hide Graph A")
-        self.showB = QCheckBox("Hide Graph B")
-        self.showC = QCheckBox("Hide Graph C")
-        self.showD = QCheckBox("Hide Graph D")
+        self.plotA = pg.PlotWidget(title="Temperature v Time")
+        # self.plotB = pg.PlotWidget(title="Channel B")
+        # self.plotC = pg.PlotWidget(title="Channel C")
+        # self.plotD = pg.PlotWidget(title="Channel D")
+        # self.showA = QCheckBox("Hide Graph A")
+        # self.showB = QCheckBox("Hide Graph B")
+        # self.showC = QCheckBox("Hide Graph C")
+        # self.showD = QCheckBox("Hide Graph D")
 
         self.times = []
 
@@ -53,19 +53,24 @@ class TestWindow(QWidget):
         self.tempCData = []
         self.tempDData = []
 
-        for plot in [self.plotA, self.plotB, self.plotC, self.plotD]:
-            plot.setLabel("left", "Temperature", units="K")
-            plot.setLabel("bottom", "Time", units="s")
+        # for plot in [self.plotA, self.plotB, self.plotC, self.plotD]:
+        #     plot.setLabel("left", "Temperature", units="K")
+        #     plot.setLabel("bottom", "Time", units="s")
+        self.plotA.setLabel("left", "Temperature", units="K")
+        self.plotA.setLabel("bottom", "Time", units="s")
+        legend = self.plotA.addLegend()
+        legend.anchor((1, 0), (1, 0))  # top-right
 
         self.curveA = self.plotA.plot(name="Channel A",pen='r')
-        self.curveB = self.plotB.plot(name="Channel B",pen='g')
-        self.curveC = self.plotC.plot(name="Channel C",pen='b')
-        self.curveD = self.plotD.plot(name="Channel D",pen='white')
+        self.curveB = self.plotA.plot(name="Channel B",pen='g')
+        self.curveC = self.plotA.plot(name="Channel C",pen='b')
+        self.curveD = self.plotA.plot(name="Channel D",pen='white')
 
         self.start_time = None
 
         self.times = []
 
+        self.auto_proceed = False #Initialize the automatic temperature advancement
 
         self.setWindowTitle("Cryocon Logger")
 
@@ -102,6 +107,11 @@ class TestWindow(QWidget):
         self.simcheck = QCheckBox("Simulate Random Data?")
         self.setRangeButton = QPushButton("Set Temperature Range")
 
+        #channel optional buttons
+        self.channelA = QCheckBox('Channel A')
+        self.channelB = QCheckBox('Channel B')
+        self.channelC = QCheckBox('Channel C')
+        self.channelD = QCheckBox('Channel D')
 
         #timer to continuously update temperatures
         self.guiTimer = QTimer()
@@ -112,7 +122,7 @@ class TestWindow(QWidget):
 
         controlsLayout = QVBoxLayout()
         tempcontLayout = QVBoxLayout()
-        graphLayout = QGridLayout()
+        graphLayout = QVBoxLayout()
 
         #seperator lines to help visual clarity
         separator1 = QFrame()
@@ -217,28 +227,40 @@ class TestWindow(QWidget):
 
         tempcontLayout.addWidget(QLabel("Filename"))
         tempcontLayout.addWidget(self.filename)
-        
+
+        # Active Channels
+        tempcontLayout.addWidget(QLabel("Active Channels"))
+
+        channelcontLayout1 = QHBoxLayout()
+        channelcontLayout1.addWidget(self.channelA)
+        channelcontLayout1.addWidget(self.channelB)
+        channelcontLayout2 = QHBoxLayout() 
+        channelcontLayout2.addWidget(self.channelC)
+        channelcontLayout2.addWidget(self.channelD)
+        tempcontLayout.addLayout(channelcontLayout1)
+        tempcontLayout.addLayout(channelcontLayout2)
+
         # Proceed to next temperature
         tempcontLayout.addWidget(self.proceedButton)
 
+
         # Graph layout
 
-        graphLayout.setRowStretch(1, 1)
-        graphLayout.setRowStretch(3, 1)
-        graphLayout.setColumnStretch(0, 1)
-        graphLayout.setColumnStretch(1, 1)
+        # graphLayout.setRowStretch(1, 1)
+        # graphLayout.setRowStretch(3, 1)
+        # graphLayout.setColumnStretch(0, 1)
+        # graphLayout.setColumnStretch(1, 1)
 
-        graphLayout.addWidget(self.showA, 0, 0)
-        graphLayout.addWidget(self.plotA, 1, 0)
+        graphLayout.addWidget(self.plotA)
 
-        graphLayout.addWidget(self.showB, 0, 1)
-        graphLayout.addWidget(self.plotB, 1, 1)
+        # graphLayout.addWidget(self.showB, 0, 1)
+        # graphLayout.addWidget(self.plotB, 1, 1)
 
-        graphLayout.addWidget(self.showC, 2, 0)
-        graphLayout.addWidget(self.plotC, 3, 0)
+        # graphLayout.addWidget(self.showC, 2, 0)
+        # graphLayout.addWidget(self.plotC, 3, 0)
 
-        graphLayout.addWidget(self.showD, 2, 1)
-        graphLayout.addWidget(self.plotD, 3, 1)
+        # graphLayout.addWidget(self.showD, 2, 1)
+        # graphLayout.addWidget(self.plotD, 3, 1)
 
 
         mainLayout.addLayout(controlsLayout, 0)
@@ -265,6 +287,17 @@ class TestWindow(QWidget):
                 "File name is empty or contains only spaces"
             )
             return
+        active_channels = self.get_active_channels()
+
+        if not active_channels:
+            QMessageBox.warning(
+                self,
+                "No Active Channels",
+                "Please select at least one active channel."
+            )
+            return
+
+        print("Active channels:", active_channels) #remove this line later, just using to check if active channels is working
 
         if self.simcheck.isChecked():
             self.inst = FakeCryocon34()
@@ -279,20 +312,23 @@ class TestWindow(QWidget):
 
         self.logger = temperature_logger(
             filename=self.filename.text(),
-            channels=("A","B","C","D"),
+            channels=active_channels,
         )
         self.temperature_loop = TemperatureLoop(
             controller=self.inst,
             temperature_arange=self.temperature_arange,
-            channels=("A","B","C","D"),
+            channels=active_channels,
             logger=self.logger,
             stability_callback=self.temperature_stabilized.emit,
+
 
     )
 
 
     def start_logging(self):
-        
+
+        self.ask_auto_proceed()
+
         if not self.logger:
             self.connectStatus.setText("No logger initialized")
             return
@@ -333,43 +369,103 @@ class TestWindow(QWidget):
 
         temps = self.temperature_loop.temperatures
         stabilities = self.temperature_loop.stabilities
+        active_channels = self.temperature_loop.channels
 
-        self.tempA.setText("--" if np.isnan(temps['A']) else (f"{temps['A']:.3f} K"))
-        self.tempB.setText("--" if np.isnan(temps['B']) else (f"{temps['B']:.3f} K"))
-        self.tempC.setText("--" if np.isnan(temps['C']) else (f"{temps['C']:.3f} K"))
-        self.tempD.setText("--" if np.isnan(temps['D']) else (f"{temps['D']:.3f} K"))
+        # Update temperature and stability indicators
+        if "A" in active_channels:
+            self.tempA.setText(
+                "--" if np.isnan(temps["A"])
+                else f"{temps['A']:.3f} K"
+            )
 
-        self.stableA.setText("Stable" if stabilities["A"].stable else "Not Stable")
-        self.stableB.setText("Stable" if stabilities["B"].stable else "Not Stable")
-        self.stableC.setText("Stable" if stabilities["C"].stable else "Not Stable")
-        self.stableD.setText("Stable" if stabilities["D"].stable else "Not Stable")
-        # add graph point
+            self.stableA.setText(
+                "Stable" if stabilities["A"].stable
+                else "Not Stable"
+                )
+
+        if "B" in active_channels:
+            self.tempB.setText(
+                "--" if np.isnan(temps["B"])
+                else f"{temps['B']:.3f} K"
+            )
+
+            self.stableB.setText(
+                "Stable" if stabilities["B"].stable
+                else "Not Stable"
+            )
+
+        if "C" in active_channels:
+            self.tempC.setText(
+                "--" if np.isnan(temps["C"])
+                else f"{temps['C']:.3f} K"
+            )
+
+            self.stableC.setText(
+                "Stable" if stabilities["C"].stable
+                else "Not Stable"
+            )
+
+        if "D" in active_channels:
+            self.tempD.setText(
+                "--" if np.isnan(temps["D"])
+                else f"{temps['D']:.3f} K"
+            )
+
+            self.stableD.setText(
+                "Stable" if stabilities["D"].stable
+                else "Not Stable"
+            )
+
+        # Don't add graph data until logging has started
         if self.start_time is None:
             return
-        
+
         current_time = time.monotonic() - self.start_time
         self.times.append(current_time)
 
-        # store temperatures
-        self.tempAData.append(temps["A"])
-        self.tempBData.append(temps["B"])
-        self.tempCData.append(temps["C"])
-        self.tempDData.append(temps["D"])
+        # Store temperature data
+        if "A" in active_channels:
+            self.tempAData.append(temps["A"])
 
+        if "B" in active_channels:
+            self.tempBData.append(temps["B"])
+
+        if "C" in active_channels:
+            self.tempCData.append(temps["C"])
+
+        if "D" in active_channels:
+            self.tempDData.append(temps["D"])
+
+        # Truncate old data
         window = self.truncate.value()
 
         while self.times and (current_time - self.times[0]) > window:
             self.times.pop(0)
-            self.tempAData.pop(0)
-            self.tempBData.pop(0)
-            self.tempCData.pop(0)
-            self.tempDData.pop(0)
 
-        # update plots
-        self.curveA.setData(self.times, self.tempAData)
-        self.curveB.setData(self.times, self.tempBData)
-        self.curveC.setData(self.times, self.tempCData)
-        self.curveD.setData(self.times, self.tempDData)
+            if "A" in active_channels:
+                self.tempAData.pop(0)
+
+            if "B" in active_channels:
+                self.tempBData.pop(0)
+
+            if "C" in active_channels:
+                self.tempCData.pop(0)
+
+            if "D" in active_channels:
+                self.tempDData.pop(0)
+
+        # Update plots
+        if "A" in active_channels:
+            self.curveA.setData(self.times, self.tempAData)
+
+        if "B" in active_channels:
+            self.curveB.setData(self.times, self.tempBData)
+
+        if "C" in active_channels:
+            self.curveC.setData(self.times, self.tempCData)
+
+        if "D" in active_channels:
+            self.curveD.setData(self.times, self.tempDData)
 
     def set_temperature_range(self):
 
@@ -400,11 +496,48 @@ class TestWindow(QWidget):
         print("Temperature range:", self.temperature_arange)
 
     def show_stabilized_popup(self, temperature):
-        QMessageBox.information(
-            self,
-            "Temperature Stabilized",
-            f"All channels have stabilized at {temperature:.3f} K."
-        )
+
+        if self.auto_proceed is True:
+            self.next_temp()
+        else:
+            QMessageBox.information(
+                self,
+                "Temperature Stabilized",
+                f"All channels have stabilized at {temperature:.3f} K."
+            )
 
     def next_temp(self):
         self.temperature_loop.next_temperature()
+
+    def get_active_channels(self):
+        channels = []
+
+        if self.channelA.isChecked():
+            channels.append("A")
+
+        if self.channelB.isChecked():
+            channels.append("B")
+
+        if self.channelC.isChecked():
+            channels.append("C")
+
+        if self.channelD.isChecked():
+            channels.append("D")
+
+        return tuple(channels)
+
+    def ask_auto_proceed(self):
+        msgbox = QMessageBox.question(
+            self,
+            "Automatically Proceed?",
+            "Do you wish to automatically proceed to the next temperature once all channels have stabilized?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+
+        if msgbox == QMessageBox.Yes:
+            self.auto_proceed = True
+            print("Automatic progression enabled")
+        else:
+            self.auto_proceed = False
+            print("Automatic progression disabled")
