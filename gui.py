@@ -15,9 +15,12 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QGridLayout,
     QFrame,
-    QDoubleSpinBox
+    QDoubleSpinBox,
+    QTabWidget,
+    QGroupBox
 )
 
+from Instruments.nullfinder import (agilent,NullFinder)
 from Instruments.Cryocon34 import Cryocon34
 from Instruments.Fake_Cryocon34 import FakeCryocon34
 from Instruments.Temperature_controllers import TemperatureController
@@ -117,6 +120,14 @@ class TestWindow(QWidget):
         self.guiTimer = QTimer()
         self.guiTimer.timeout.connect(self.update_temperatures)
         self.guiTimer.start(1000)   # Update every 500 ms
+
+
+        #Layout and tabs
+        tabs = QTabWidget()
+
+        # Tab 1:Temperature Controller
+    
+        loggerTab = QWidget()
 
         mainLayout = QHBoxLayout()
 
@@ -268,7 +279,207 @@ class TestWindow(QWidget):
         mainLayout.addLayout(tempcontLayout, 0)
         mainLayout.addWidget(separator2)
         mainLayout.addLayout(graphLayout, 1)
-        self.setLayout(mainLayout)
+
+        loggerTab.setLayout(mainLayout)
+
+        #Tab 2: Going to be the motor control
+        motorTab = QWidget()
+        motorLayout = QHBoxLayout()
+        parent_start = QVBoxLayout()
+        parent_auto = QVBoxLayout()
+        parent_manual = QVBoxLayout()
+        parent_stop = QVBoxLayout()
+
+    
+        self.connectStatus_motor = QLabel("Status: <b> Disconnected </b>")
+
+        self.comment_motor = QLineEdit()
+        self.filename_motor = QLineEdit()
+
+        self.connectButton_motor = QPushButton("Connect to Zaber X-MCA-S")
+        self.commentButton_motor = QPushButton("Save Comment")
+
+        self.variableButton = QPushButton("Confirm Set Variables")
+        self.variableStatus = QLabel("Status: <b> Unconfirmed </b>")
+
+        self.home = QDoubleSpinBox()
+        self.home.setRange(0.500, 1.000)
+        self.home.setDecimals(3)
+        self.home.setSingleStep(0.050)
+        self.home.setValue(0.500)
+        self.home.setReadOnly(True)
+
+        self.min = QDoubleSpinBox()
+        self.min.setRange(0.500, 1.000)
+        self.min.setDecimals(3)
+        self.min.setSingleStep(0.050)
+        self.min.setValue(0.500)
+        self.min.setReadOnly(True)
+
+        self.max = QDoubleSpinBox()
+        self.max.setRange(0.750, 4.000)
+        self.max.setDecimals(3)
+        self.max.setSingleStep(0.050)
+        self.max.setValue(4.000)
+        self.max.setReadOnly(True)
+
+        self.lockvariables = QCheckBox("Lock Variables")
+        self.lockvariables.setChecked(True)
+
+        self.abs = QDoubleSpinBox()
+        self.abs.setRange(0.500, 4.000)
+        self.abs.setDecimals(3)
+        self.abs.setSingleStep(0.050)
+        self.abs.setValue(0.500)
+
+        self.rel = QDoubleSpinBox()
+        self.rel.setRange(-3.000, 3.000)
+        self.rel.setDecimals(3)
+        self.rel.setSingleStep(0.050)
+        self.rel.setValue(0.000)
+
+        self.stepsize0 = QDoubleSpinBox()
+        self.stepsize0.setRange(0.100, 0.500)
+        self.stepsize0.setDecimals(3)
+        self.stepsize0.setSingleStep(0.010)
+        self.stepsize0.setValue(0.200)
+
+        self.precision = QDoubleSpinBox()
+        self.precision.setRange(0.001, 0.100)
+        self.precision.setDecimals(3)
+        self.precision.setSingleStep(0.001)
+        self.precision.setValue(0.001)
+
+        self.vdisplay = QDoubleSpinBox()
+        self.vdisplay.setDecimals(3)
+        self.vdisplay.setSpecialValueText("--")
+        self.vdisplay.setReadOnly(True)
+        self.vdisplay.setButtonSymbols(QDoubleSpinBox.NoButtons)
+
+        self.confirmation = False
+
+        self.autofindButton = QPushButton("Find Null Position")
+        self.nullStatus = QLabel("Status: <b> Disconnected </b>")
+        self.gethomeButton = QPushButton("Get Home Position")
+        self.homeStatus = QLabel("Status: <b> Disconnected </b>")
+        self.getposButton = QPushButton("Get Position")
+        self.posStatus = QLabel("Status: <b> Disconnected </b>")
+        self.absButton = QPushButton("Enter")
+        self.relButton = QPushButton("Enter")
+        self.setnullButton = QPushButton("Set Null Position")
+        self.setnullStatus = QLabel("Status: <b> Disconnected </b>")
+        self.rehomeButton = QPushButton("Return motor to home")
+        self.rehomeStatus = QLabel("Status: <b> Disconnected </b>")
+        self.stopButton_motor = QPushButton("Stop logging")
+        self.stopStatus_motor = QLabel("Run Status: <b> Disconnected </b>")
+
+        # Layout
+        parent_start.addWidget(self.connectStatus_motor)
+        parent_start.addWidget(self.connectButton_motor)
+
+        parent_start.addWidget(QLabel("Filename (.csv)"))
+        parent_start.addWidget(self.filename_motor)
+
+        parent_start.addWidget(QLabel("Comment"))
+        parent_start.addWidget(self.comment)
+
+        buttons = QVBoxLayout()
+        buttons.addWidget(self.commentButton)
+        parent_start.addLayout(buttons)
+
+        var_box = QGroupBox()
+        var_layout = QHBoxLayout()
+        var_layout1 = QVBoxLayout()
+        var_layout1.addWidget(QLabel("Home (in)"))
+        var_layout1.addWidget(self.home)
+        var_layout1.addStretch()
+        var_layout2 = QVBoxLayout()
+        var_layout2.addWidget(QLabel("Min (in)"))
+        var_layout2.addWidget(self.min)
+        var_layout2.addStretch()
+        var_layout3 = QVBoxLayout()
+        var_layout3.addWidget(QLabel("Max (in)"))
+        var_layout3.addWidget(self.max)
+        var_layout3.addStretch()
+        var_layout4 = QVBoxLayout()
+        var_layout4.addWidget(self.variableStatus)
+        var_layout4.addWidget(self.variableButton)
+        var_layout4.addWidget(self.lockvariables)
+        var_layout4.addStretch()
+        var_layout.addLayout(var_layout1)
+        var_layout.addLayout(var_layout2)
+        var_layout.addLayout(var_layout3)
+        var_layout.addLayout(var_layout4)
+        var_box.setLayout(var_layout)
+        parent_start.addWidget(var_box)
+        parent_start.addStretch()
+
+        motorLayout.addLayout(parent_start)
+
+        auto_box = QGroupBox()
+        auto_layout = QVBoxLayout()
+        auto_layout.addWidget(QLabel("<b> Automatic Null Finder </b>"))
+        auto_layout.addWidget(QLabel("Initial Step Size (in)"))
+        auto_layout.addWidget(self.stepsize0)
+        auto_layout.addWidget(QLabel("Precision (in)"))
+        auto_layout.addWidget(self.precision)
+        auto_layout.addWidget(self.nullStatus)
+        auto_layout.addWidget(self.autofindButton)
+        auto_box.setLayout(auto_layout)
+        parent_auto.addWidget(auto_box)
+        parent_auto.addStretch()
+
+        motorLayout.addLayout(parent_auto)
+
+        manual_box = QGroupBox()
+        manual_layout = QVBoxLayout()
+        manual_layout.addWidget(QLabel("<b> Manual Null Finder </b>"))
+        manual_layout.addWidget(self.homeStatus)
+        manual_layout.addWidget(self.gethomeButton)
+        manual_layout.addWidget(self.posStatus)
+        manual_layout.addWidget(self.getposButton)
+        manual_layout.addWidget(QLabel("Move abs (in)"))
+        manual_abs = QHBoxLayout()
+        manual_abs.addWidget(self.abs)
+        manual_abs.addWidget(self.absButton)
+        manual_layout.addLayout(manual_abs)
+        manual_layout.addWidget(QLabel("Move rel (in)"))
+        manual_rel = QHBoxLayout()
+        manual_rel.addWidget(self.rel)
+        manual_rel.addWidget(self.relButton)
+        manual_layout.addLayout(manual_rel)
+        manual_layout.addWidget(QLabel("Voltage (V)"))
+        manual_layout.addWidget(self.vdisplay)
+        manual_layout.addWidget(self.setnullStatus)
+        manual_layout.addWidget(self.setnullButton)
+        manual_box.setLayout(manual_layout)
+        parent_manual.addWidget(manual_box)
+        parent_manual.addStretch()
+
+        motorLayout.addLayout(parent_manual)
+
+        completion_box = QVBoxLayout()
+        completion_box.addWidget(self.rehomeStatus)
+        completion_box.addWidget(self.rehomeButton)
+        completion_box.addWidget(self.stopStatus_motor)
+        completion_box.addWidget(self.stopButton_motor)
+        parent_stop.addLayout(completion_box)
+        parent_stop.addStretch()
+
+        motorLayout.addLayout(parent_stop)
+
+        self.setLayout(motorLayout)
+
+        #FINAL SETUP
+        motorTab.setLayout(motorLayout)
+
+        tabs.addTab(loggerTab, "Temperature Logger")
+        tabs.addTab(motorTab, "Motor Control")
+
+        windowLayout = QVBoxLayout()
+        windowLayout.addWidget(tabs)
+
+        self.setLayout(windowLayout)
 
         #connect buttons to functions
         self.startButton.clicked.connect(self.start_logging)
@@ -279,6 +490,22 @@ class TestWindow(QWidget):
         self.temperature_stabilized.connect(self.show_stabilized_popup)
         self.proceedButton.clicked.connect(self.next_temp)
 
+        #connect buttons for motor control
+        self.connectButton_motor.clicked.connect(self.setup_instrument_motor)
+        self.commentButton_motor.clicked.connect(self.add_comment_motor)
+        self.variableButton.clicked.connect(self.set_variables)
+        self.autofindButton.clicked.connect(self.auto_null)
+        self.gethomeButton.clicked.connect(self.get_home)
+        self.getposButton.clicked.connect(self.get_pos)
+        self.gethomeButton.clicked.connect(self.get_home)
+        self.relButton.clicked.connect(self.move_rel)
+        self.absButton.clicked.connect(self.move_abs)
+        self.setnullButton.clicked.connect(self.set_null)
+        self.rehomeButton.clicked.connect(self.rehome)
+        self.stopButton_motor.clicked.connect(self.stop_logging_motor)
+        self.lockvariables.checkStateChanged.connect(self.unlock)
+
+    #FUNCTIONS THAT INTERACT WITH CRYOCON START HERE
     def setup_instrument(self):
         if not self.filename.text().strip():
             QMessageBox.critical(
@@ -541,3 +768,110 @@ class TestWindow(QWidget):
         else:
             self.auto_proceed = False
             print("Automatic progression disabled")
+
+    #FUNCTIONS THAT CONTROL MOTOR START HERE
+    def setup_instrument_motor(self):
+        if not self.filename_motor.text().strip():
+            QMessageBox.critical(
+                None,
+                "Error",
+                "File name is empty or contains only spaces")
+        elif self.confirmation == False:
+            QMessageBox.critical(
+                None,
+                "Warning",
+                "Home position defines the zero reference for microsteps in the motor. "
+                f"Beginning of runs assumes this as {self.home.value()} in. "
+                "Please confirm visually before connecting.")
+        else:
+            self.logger.start()
+            self.logger.move_abs(self.home.value())
+            self.stopStatus.setText("Run Status: <b> Running </b>")
+
+    def add_comment_motor(self):
+        self.logger.add_comment(self.comment.text())
+
+    def set_variables(self):
+        if (self.max.value() < self.home.value()) or (self.home.value() < self.min.value()):
+            QMessageBox.critical(
+                None,
+                "Error",
+                f"Home position is out of bounds.")
+        else:
+            self.confirmation = True
+            self.logger = NullFinder(
+                _min=self.min.value(),
+                _max=self.max.value(),
+                _home=self.home.value(),
+                filename=self.filename_motor.text()
+            )
+            self.variableStatus.setText("Status: <b>Confirmed</b>")
+            self.connectStatus.setText("Status: <b> Ready </b>")
+
+    def auto_null(self):
+        self.nullStatus.setText("Status: <b>Searching</b>")
+        self.logger.find_null(self.stepsize0.value(), self.precision.value())
+        self.null = self.logger.null
+        self.nullStatus.setText(
+            f"Status: Null found and set as {self.null} in")
+
+    def get_home(self):
+        self.homeStatus.setText(f"Status: Home is {self.logger.get_home} in")
+
+    def get_pos(self):
+        val = self.logger.pos_in_inches() + self.home
+        self.logger.write_pos()
+        self.posStatus.setText(f"Status: Position is {val} in")
+        self.voltage()
+
+    def move_rel(self):
+        val = self.logger.pos_in_inches() + self.home.value() + self.rel.value()
+
+        if (self.max.value() < val) or (val < self.min.value()):
+            QMessageBox.critical(
+                None,
+                "Error",
+                f"Moving {self.rel.value()} in is out of bounds.")
+        else:
+            self.logger.move_rel(self.rel.value())
+            self.logger.write_pos()
+            self.voltage()
+
+    def move_abs(self):
+        if (self.max.value() < self.abs.value()) or (self.abs.value() < self.min.value()):
+            QMessageBox.critical(
+                None,
+                "Error",
+                f"Moving {self.abs.value()} in is out of bounds.")
+        else:
+            self.logger.move_abs(self.abs.value())
+            self.logger.write_pos()
+            self.voltage()
+
+    def set_null(self):
+        self.logger.set_null()
+        self.setnullStatus.setText(f"Status: This position is set as null")
+
+    def rehome(self):
+        self.logger.move_abs(self.home.value())
+        self.rehomeStatus.setText(f"Status: Complete")
+
+    def stop_logging_motor(self):
+        self.logger.stop()
+        self.stopStatus.setText("Run Status: <b> Stopped </b>")
+
+    def voltage(self):
+       val = self.logger.get_voltage()
+       self.vdisplay.blockSignals(True)
+       self.vdisplay.setValue(val)
+       self.vdisplay.blockSignals(False)
+
+    def unlock(self, state):
+        if state == Qt.CheckState.Checked:
+            self.min.setReadOnly(True)
+            self.max.setReadOnly(True)
+            self.home.setReadOnly(True)
+        elif state == Qt.CheckState.Unchecked:
+            self.min.setReadOnly(False)
+            self.max.setReadOnly(False)
+            self.home.setReadOnly(False)
