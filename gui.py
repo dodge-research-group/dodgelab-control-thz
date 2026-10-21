@@ -1,6 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 import time
+import json
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -27,7 +28,7 @@ from Instruments.Temperature_controllers import TemperatureController
 from Instruments.temperature_logger import temperature_logger
 from Instruments.Temperature_loop import TemperatureLoop
 from Instruments.temperature_stability import temperature_stability
-
+import json
 
 from PySide6.QtCore import (QTimer, Qt, Signal)
 
@@ -38,6 +39,9 @@ class TestWindow(QWidget):
 
     def __init__(self):
         super().__init__()
+
+        with open("config/mdc.json", "r") as f:
+            mdc = json.load(f)
 
         #Graph plotting
         self.plotA = pg.PlotWidget(title="Temperature v Time")
@@ -254,24 +258,7 @@ class TestWindow(QWidget):
         # Proceed to next temperature
         tempcontLayout.addWidget(self.proceedButton)
 
-
-        # Graph layout
-
-        # graphLayout.setRowStretch(1, 1)
-        # graphLayout.setRowStretch(3, 1)
-        # graphLayout.setColumnStretch(0, 1)
-        # graphLayout.setColumnStretch(1, 1)
-
         graphLayout.addWidget(self.plotA)
-
-        # graphLayout.addWidget(self.showB, 0, 1)
-        # graphLayout.addWidget(self.plotB, 1, 1)
-
-        # graphLayout.addWidget(self.showC, 2, 0)
-        # graphLayout.addWidget(self.plotC, 3, 0)
-
-        # graphLayout.addWidget(self.showD, 2, 1)
-        # graphLayout.addWidget(self.plotD, 3, 1)
 
 
         mainLayout.addLayout(controlsLayout, 0)
@@ -310,10 +297,10 @@ class TestWindow(QWidget):
         self.home.setReadOnly(True)
 
         self.min = QDoubleSpinBox()
-        self.min.setRange(0.500, 1.000)
+        self.min.setRange(0, 1.000)
         self.min.setDecimals(3)
         self.min.setSingleStep(0.050)
-        self.min.setValue(0.500)
+        self.min.setValue(0)
         self.min.setReadOnly(True)
 
         self.max = QDoubleSpinBox()
@@ -373,33 +360,40 @@ class TestWindow(QWidget):
         self.stopButton_motor = QPushButton("Stop logging")
         self.stopStatus_motor = QLabel("Run Status: <b> Disconnected </b>")
 
+        # MetaData
+        self.mdc_min_label = QLabel("min_inch:")
+        self.mdc_min = QLabel(str(mdc["min_inch"]))
+        self.mdc_max_label = QLabel("max_inch:")
+        self.mdc_max = QLabel(str(mdc["max_inch"]))
+        self.mdc_step_conversion_label = QLabel("steps_per_inch:")
+        self.mdc_step_conversion = QLabel(str(mdc["steps_per_inch"]))
         # Layout
         parent_start.addWidget(self.connectStatus_motor)
         parent_start.addWidget(self.connectButton_motor)
 
-        parent_start.addWidget(QLabel("Filename (.csv)"))
+        parent_start.addWidget(QLabel("Filename"))
         parent_start.addWidget(self.filename_motor)
 
         parent_start.addWidget(QLabel("Comment"))
-        parent_start.addWidget(self.comment)
+        parent_start.addWidget(self.comment_motor)
 
         buttons = QVBoxLayout()
-        buttons.addWidget(self.commentButton)
+        buttons.addWidget(self.commentButton_motor)
         parent_start.addLayout(buttons)
 
         var_box = QGroupBox()
         var_layout = QHBoxLayout()
         var_layout1 = QVBoxLayout()
-        var_layout1.addWidget(QLabel("Home (in)"))
+        var_layout1.addWidget(QLabel("Reference position (in)"))
         var_layout1.addWidget(self.home)
         var_layout1.addStretch()
         var_layout2 = QVBoxLayout()
-        var_layout2.addWidget(QLabel("Min (in)"))
-        var_layout2.addWidget(self.min)
+        #var_layout2.addWidget(QLabel("Min (in)"))
+        #var_layout2.addWidget(self.min)
         var_layout2.addStretch()
         var_layout3 = QVBoxLayout()
-        var_layout3.addWidget(QLabel("Max (in)"))
-        var_layout3.addWidget(self.max)
+        #var_layout3.addWidget(QLabel("Max (in)"))
+        #var_layout3.addWidget(self.max)
         var_layout3.addStretch()
         var_layout4 = QVBoxLayout()
         var_layout4.addWidget(self.variableStatus)
@@ -416,9 +410,9 @@ class TestWindow(QWidget):
 
         motorLayout.addLayout(parent_start)
 
-        auto_box = QGroupBox()
+        auto_box = QGroupBox("Automatic Null Finder")
         auto_layout = QVBoxLayout()
-        auto_layout.addWidget(QLabel("<b> Automatic Null Finder </b>"))
+        #auto_layout.addWidget(QLabel("<b> Automatic Null Finder </b>"))
         auto_layout.addWidget(QLabel("Initial Step Size (in)"))
         auto_layout.addWidget(self.stepsize0)
         auto_layout.addWidget(QLabel("Precision (in)"))
@@ -431,9 +425,9 @@ class TestWindow(QWidget):
 
         motorLayout.addLayout(parent_auto)
 
-        manual_box = QGroupBox()
+        manual_box = QGroupBox("Manual Null Finder")
         manual_layout = QVBoxLayout()
-        manual_layout.addWidget(QLabel("<b> Manual Null Finder </b>"))
+        #manual_layout.addWidget(QLabel("<b> Manual Null Finder </b>"))
         manual_layout.addWidget(self.homeStatus)
         manual_layout.addWidget(self.gethomeButton)
         manual_layout.addWidget(self.posStatus)
@@ -464,7 +458,27 @@ class TestWindow(QWidget):
         completion_box.addWidget(self.stopStatus_motor)
         completion_box.addWidget(self.stopButton_motor)
         parent_stop.addLayout(completion_box)
+
+
+        metadata = QVBoxLayout()
+        metadata1 = QHBoxLayout()
+        metadata1.addWidget(self.mdc_min_label)
+        metadata1.addWidget(self.mdc_min)
+        metadata.addLayout(metadata1)
+        metadata2 = QHBoxLayout()
+        metadata2.addWidget(self.mdc_max_label)
+        metadata2.addWidget(self.mdc_max)
+        metadata.addLayout(metadata2)
+        metadata3 = QHBoxLayout()
+        metadata3.addWidget(self.mdc_step_conversion_label)
+        metadata3.addWidget(self.mdc_step_conversion)
+        metadata.addLayout(metadata3)
+        metadata_box = QGroupBox("MDC Metadata")
+        metadata_box.setLayout(metadata)
+        parent_stop.addWidget(metadata_box)
+        parent_stop.addLayout(metadata)
         parent_stop.addStretch()
+
 
         motorLayout.addLayout(parent_stop)
 
@@ -789,7 +803,7 @@ class TestWindow(QWidget):
             self.stopStatus.setText("Run Status: <b> Running </b>")
 
     def add_comment_motor(self):
-        self.logger.add_comment(self.comment.text())
+        self.logger.add_comment(self.comment_motor.text())
 
     def set_variables(self):
         if (self.max.value() < self.home.value()) or (self.home.value() < self.min.value()):

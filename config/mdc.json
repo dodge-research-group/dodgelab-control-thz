@@ -1,0 +1,5 @@
+{
+    "min_inch": 0.0,
+    "max_inch": 4.0,
+    "steps_per_inch": 512000
+}
