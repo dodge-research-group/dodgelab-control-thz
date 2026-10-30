@@ -129,6 +129,11 @@ class TestWindow(QWidget):
         #Layout and tabs
         tabs = QTabWidget()
 
+        airTab = QWidget()
+        sampleTab = QWidget()
+        tcontTab = QWidget()
+
+
         # Tab 1:Temperature Controller
     
         loggerTab = QWidget()
@@ -487,8 +492,15 @@ class TestWindow(QWidget):
         #FINAL SETUP
         motorTab.setLayout(motorLayout)
 
+        #new tabs setup (not finished)
+        waveTab = QWidget()
+
+        tabs.addTab(airTab, "Air Scans")
+        tabs.addTab(sampleTab, "Sample Scans")
+        tabs.addTab(tcontTab, "T-Controlled Scans")
         tabs.addTab(loggerTab, "Temperature Logger")
         tabs.addTab(motorTab, "Motor Control")
+        tabs.addTab(waveTab, "Waveform Aquisition")
 
         windowLayout = QVBoxLayout()
         windowLayout.addWidget(tabs)
