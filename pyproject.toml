@@ -1,14 +1,21 @@
 [project]
 
 name = "dodgelab-control-thz"
-version = "1.0.0a"
+version = "0.1.0a"
 description = "a GUI control system for thz control systems"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Augusten Fairbairn", email = "augustenfairbairn@gmail.com" },
     { name = "Steve Dodge", email = "jsdodge@sfu.ca" },
     { name = "Juan David Santacruz Roca", email = "j.santacruzr@uniandes.edu.co" }
 ]
+
+[dependency-groups]
+
+dev = [ { include-group = "test" } ]
+test = [ "pytest" ]
 
 [project.optional-dependencies]
 
@@ -16,3 +23,8 @@ test = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]
+
+[build-system]
+
+requires = ["hatchling"]
+build-backend = "hatchling.build"
