@@ -7,5 +7,5 @@ readme = "README.md"
 authors = [
     { name = "Augusten Fairbairn", email = "augustenfairbairn@gmail.com" },
     { name = "Steve Dodge", email = "jsdodge@sfu.ca" },
-    { name = "Juan David Santacruz Roca", email = "j.santacruzr@uniandes@edu.co"}
+    { name = "Juan David Santacruz Roca", email = "j.santacruzr@uniandes.edu.co" }
 ]
