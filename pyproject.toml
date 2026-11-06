@@ -24,3 +24,18 @@ dev = [
 
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+log_level = "INFO"
+xfail_strict = true
+strict_config = true
+
+addopts = [
+    "-ra",
+    "--strict-markers",
+]
