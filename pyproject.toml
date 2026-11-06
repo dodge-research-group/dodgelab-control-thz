@@ -1,11 +1,13 @@
 [project]
 
 name = "dodgelab-control-thz"
-version = "0.1.0a"
+version = "0.1.0a1"
 description = "a GUI control system for thz control systems"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
+requires-python = ">=3.12"
+
 authors = [
     { name = "Augusten Fairbairn", email = "augustenfairbairn@gmail.com" },
     { name = "Steve Dodge", email = "jsdodge@sfu.ca" },
@@ -13,13 +15,7 @@ authors = [
 ]
 
 [dependency-groups]
-
-dev = [ { include-group = "test" } ]
-test = [ "pytest" ]
-
-[project.optional-dependencies]
-
-test = [
+dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
 ]

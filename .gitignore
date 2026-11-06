@@ -1,2 +1,6 @@
 # Ignore Python bytecode caching
 __pycache__/
+
+#Ignore old testing file
+testing.ipynb
+testing.csv

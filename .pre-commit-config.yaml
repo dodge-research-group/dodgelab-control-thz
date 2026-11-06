@@ -9,20 +9,33 @@ ci:
 
 # The core list of repositories and hooks to run
 repos:
-  # 1. Standard/General Hooks
+  # 1. Standard/general hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0  # Use the latest stable version
+    rev: v4.6.0
     hooks:
-      - id: trailing-whitespace      # Trims trailing whitespace
-      - id: end-of-file-fixer        # Ensures files end with a newline
-      - id: check-yaml               # Validates YAML syntax
-      - id: check-added-large-files  # Prevents giant files from being committed
-      - id: detect-private-key       # Blocks accidental private key leaks
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: detect-private-key
 
-  # 2. Modern Python Linter & Formatter (Ruff)
+  # 2. Python linting and formatting (Ruff)
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.4
     hooks:
-      - id: ruff-check
-        args: [--fix]                # Auto-fix lint violations where possible
-      - id: ruff-format              # Consistent code formatting
+      - id: ruff
+        args: [--fix, --show-fixes]
+      - id: ruff-format
+
+  # 3. Python type checking (Mypy)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies: []
+
+  # 4. Spelling checks
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.3.0
+    hooks:
+      - id: codespell
