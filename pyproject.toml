@@ -9,3 +9,10 @@ authors = [
     { name = "Steve Dodge", email = "jsdodge@sfu.ca" },
     { name = "Juan David Santacruz Roca", email = "j.santacruzr@uniandes.edu.co" }
 ]
+
+[project.optional-dependencies]
+
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
